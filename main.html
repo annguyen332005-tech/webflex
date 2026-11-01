@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giới Thiệu Developer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & Orbitron for Sci-Fi vibe -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050508;
+            color: #ffffff;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Glassmorphism styling */
+        .glass-panel {
+            background: rgba(13, 17, 23, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-panel-active {
+            border-color: rgba(0, 240, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Custom scrollbar for modals */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 15, 30, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.4);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.8);
+        }
+
+        /* Scanline effect */
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+                    rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg,
+                    rgba(255, 0, 0, 0.03),
+                    rgba(0, 255, 0, 0.01),
+                    rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Reticle pulsing */
+        @keyframes reticle-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+                color: #00f0ff;
+            }
+        }
+
+        .reticle-interact {
+            animation: reticle-pulse 1s infinite;
+            color: #00f0ff !important;
+            border-color: #00f0ff !important;
+        }
+
+        .reticle-musicbox {
+            animation: reticle-pulse 0.7s infinite;
+            border-color: #ff007f !important;
+            background-color: rgba(255, 0, 127, 0.4) !important;
+            color: #ff007f !important;
+        }
+
+        /* Fade in animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+
+<body class="w-screen h-screen m-0 p-0 overflow-hidden select-none">
+
+    <!-- 3D Canvas container -->
+    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
+
+    <!-- Scanline Overlay -->
+    <div class="scanlines absolute inset-0 z-10 opacity-40"></div>
+
+    <!-- HUD Overlay -->
+    <div id="hud-layer" class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+
+        <!-- Top Bar: Header & Controls Info -->
+        <div class="flex justify-between items-start w-full">
+            <div class="glass-panel p-3 sm:p-4 rounded-xl flex items-center gap-3 border-cyan-500/30">
+                <div class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+                <div>
+                    <h1 class="font-orbitron font-bold text-sm sm:text-lg tracking-wider text-cyan-400">DEV_GALLERY //
+                        v2.0</h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">Hành lang Triển lãm Hồ sơ Cá nhân 3D</p>
+                </div>
+            </div>
+
+            <!-- Sound & Quick Controls -->
+            <div class="flex gap-2 pointer-events-auto">
+                <button id="audio-btn"
+                    class="glass-panel p-3 rounded-xl hover:bg-cyan-500/20 text-cyan-400 transition-all duration-200 border-cyan-500/30"
+                    title="Bật/Tắt Âm thanh">
+                    <i class="fas fa-volume-up text-lg"></i>
+                </button>
+                <button id="menu-toggle-btn"
+                    class="glass-panel p-3 rounded-xl hover:bg-cyan-500/20 text-cyan-400 transition-all duration-200 border-cyan-500/30 sm:hidden"
+                    title="Menu Chuyển nhanh">
+                    <i class="fas fa-compass text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Crosshair / Pointer -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+            <div id="crosshair"
+                class="w-2.5 h-2.5 rounded-full border border-cyan-400/80 bg-cyan-300/30 transition-all duration-200">
+            </div>
+        </div>
+
+        <!-- Dynamic Near Interaction Prompt -->
+        <div id="interaction-prompt"
+            class="absolute top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-all duration-300 transform translate-y-4">
+            <div
+                class="glass-panel px-6 py-2.5 rounded-full border-cyan-400/60 flex items-center gap-3 text-cyan-300 font-orbitron text-xs sm:text-sm tracking-wide shadow-lg shadow-cyan-500/20">
+                <span class="px-2 py-0.5 bg-cyan-500/20 border border-cyan-400/50 rounded text-[10px] font-bold">SPACE /
+                    TOUCH</span>
+                <span id="prompt-text">Nhấn để xem chi tiết</span>
+            </div>
+        </div>
+
+        <!-- Bottom Bar: Progress Indicator & Navigation Shortcuts -->
+        <div class="w-full flex flex-col sm:flex-row gap-4 items-center justify-between pointer-events-auto">
+
+            <!-- Progress Tracker -->
+            <div class="glass-panel px-4 py-2.5 rounded-xl w-full sm:w-80 flex flex-col gap-1.5 border-cyan-500/30">
+                <div class="flex justify-between text-xs font-orbitron">
+                    <span class="text-gray-400">VỊ TRÍ HÀNH LANG</span>
+                    <span id="progress-text" class="text-cyan-400 font-bold">0%</span>
+                </div>
+                <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div id="progress-bar"
+                        class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Quick Teleport Menu (Desktop) -->
+            <div id="teleport-menu" class="hidden sm:flex glass-panel p-1.5 rounded-xl gap-1 border-cyan-500/30">
+                <button data-target="0"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-gray-300 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all">1.
+                    GIỚI THIỆU</button>
+                <button data-target="1"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-gray-300 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all">2.
+                    KỸ NĂNG</button>
+                <button data-target="2"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-gray-300 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all">3.
+                    DỰ ÁN</button>
+                <button data-target="3"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-gray-300 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all">4.
+                    HÀNH TRÌNH</button>
+                <button data-target="4"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-gray-300 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all">5.
+                    MỐI QUAN HỆ</button>
+                <button data-target="musicbox"
+                    class="teleport-btn px-3 py-1.5 rounded-lg text-xs font-orbitron text-pink-400 border border-pink-500/40 hover:bg-pink-500/20 transition-all shadow-sm shadow-pink-500/30"><i
+                        class="fas fa-music mr-1"></i>HỘP NHẠC</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Joystick / Navigation Touch Controls -->
+    <div id="mobile-controls"
+        class="absolute bottom-20 left-6 right-6 z-20 flex justify-between items-center sm:hidden pointer-events-auto opacity-80">
+        <div class="grid grid-cols-3 gap-2 w-32 h-32 text-cyan-400 font-bold text-center">
+            <div></div>
+            <button id="btn-forward"
+                class="glass-panel rounded-lg active:bg-cyan-500/40 flex items-center justify-center text-xl"><i
+                    class="fas fa-chevron-up"></i></button>
+            <div></div>
+            <button id="btn-left"
+                class="glass-panel rounded-lg active:bg-cyan-500/40 flex items-center justify-center text-xl"><i
+                    class="fas fa-chevron-left"></i></button>
+            <button id="btn-backward"
+                class="glass-panel rounded-lg active:bg-cyan-500/40 flex items-center justify-center text-xl"><i
+                    class="fas fa-chevron-down"></i></button>
+            <button id="btn-right"
+                class="glass-panel rounded-lg active:bg-cyan-500/40 flex items-center justify-center text-xl"><i
+                    class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="flex flex-col gap-2">
+            <button id="btn-interact"
+                class="glass-panel w-16 h-16 rounded-full border-cyan-400/60 active:bg-cyan-500/40 text-cyan-300 flex items-center justify-center text-sm font-orbitron shadow-lg">
+                XEM
+            </button>
+        </div>
+    </div>
+
+    <!-- Start Overlay / Instructions Screen -->
+    <div id="start-overlay"
+        class="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center transition-opacity duration-500">
+        <div class="max-w-md glass-panel p-8 rounded-2xl border-cyan-500/40 shadow-2xl flex flex-col items-center">
+            <div
+                class="w-16 h-16 mb-4 rounded-full bg-cyan-500/10 border border-cyan-400 flex items-center justify-center text-cyan-400 text-2xl animate-pulse">
+                <i class="fas fa-vr-cardboard"></i>
+            </div>
+            <h2
+                class="font-orbitron text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+                TRẢI NGHIỆM HÀNH LANG 3D</h2>
+            <p class="text-sm text-gray-300 mb-6 leading-relaxed">Khám phá thông tin cá nhân, kỹ năng và dự án bằng góc
+                nhìn thứ nhất độc đáo.</p>
+
+            <!-- Controls Guide -->
+            <div
+                class="w-full bg-slate-900/60 p-4 rounded-xl border border-white/5 mb-6 text-left text-xs text-gray-300 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span><i class="fas fa-keyboard text-cyan-400 mr-2"></i>Di chuyển:</span>
+                    <span class="font-mono text-cyan-300">W, A, S, D / Phím mũi tên</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span><i class="fas fa-mouse text-cyan-400 mr-2"></i>Xoay góc nhìn:</span>
+                    <span class="font-mono text-cyan-300">Rê chuột (Pointer Lock)</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span><i class="fas fa-hand-pointer text-cyan-400 mr-2"></i>Tương tác nội dung:</span>
+                    <span class="font-mono text-cyan-300">Phím SPACE hoặc Click</span>
+                </div>
+            </div>
+
+            <button id="start-btn"
+                class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-orbitron font-bold rounded-xl shadow-lg shadow-cyan-500/30 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
+                BẮT ĐẦU KHÁM PHÁ
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Popup Details -->
+    <div id="modal-overlay"
+        class="absolute inset-0 z-40 bg-black/70 backdrop-blur-md hidden items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div
+            class="glass-panel w-full max-w-2xl max-h-[85vh] rounded-2xl border-cyan-400/50 flex flex-col overflow-hidden shadow-2xl animate-fade-in relative">
+
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-white/10 flex justify-between items-center bg-cyan-950/30">
+                <div class="flex items-center gap-3">
+                    <span id="modal-tag"
+                        class="px-2.5 py-1 bg-cyan-500/20 border border-cyan-400/40 rounded text-xs font-orbitron text-cyan-300">EXHIBIT
+                        #01</span>
+                    <h3 id="modal-title" class="font-orbitron font-bold text-lg sm:text-xl text-white">Tên Tiêu Đề</h3>
+                </div>
+                <button id="modal-close-btn"
+                    class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div id="modal-body" class="p-6 overflow-y-auto space-y-4 text-sm text-gray-300 leading-relaxed">
+                <!-- Content injected dynamically -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-white/10 bg-black/40 flex justify-end gap-3">
+                <button id="modal-action-btn"
+                    class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-orbitron text-xs font-bold rounded-lg transition-colors hidden">
+                    TRUY CẬP DỰ ÁN <i class="fas fa-external-link-alt ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Birthday Celebration Modal -->
+    <div id="birthday-modal"
+        class="absolute inset-0 z-40 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4 opacity-0 transition-opacity duration-500">
+        <div
+            class="glass-panel max-w-lg w-full p-8 rounded-3xl border-pink-500/60 shadow-2xl shadow-pink-500/30 text-center flex flex-col items-center relative overflow-hidden animate-fade-in">
+            <!-- Decorative Glow background -->
+            <div class="absolute -top-12 -right-12 w-36 h-36 bg-pink-500/25 rounded-full blur-3xl pointer-events-none">
+            </div>
+            <div
+                class="absolute -bottom-12 -left-12 w-36 h-36 bg-cyan-500/25 rounded-full blur-3xl pointer-events-none">
+            </div>
+
+            <div
+                class="w-20 h-20 mb-4 rounded-full bg-gradient-to-tr from-pink-500 via-rose-400 to-amber-300 p-0.5 shadow-lg shadow-pink-500/40">
+                <div
+                    class="w-full h-full bg-slate-950 rounded-full flex items-center justify-center text-pink-400 text-3xl">
+                    <i class="fas fa-birthday-cake animate-bounce"></i>
+                </div>
+            </div>
+
+            <h2
+                class="font-orbitron text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-rose-300 to-amber-300 mb-2">
+                CHÚC MỪNG SINH NHẬT! 🎂✨
+            </h2>
+            <p class="text-xs font-orbitron text-pink-300 tracking-widest mb-4">// HỘP NHẠC BÍ MẬT ĐÃ ĐƯỢC MỞ //</p>
+
+            <div
+                class="w-full bg-slate-900/60 p-4 rounded-xl border border-pink-500/30 mb-6 text-sm text-gray-200 leading-relaxed text-left space-y-3">
+                <p>
+                    Chúc mừng sinh nhật bạn! Chúc bạn bước sang tuổi mới luôn luôn vui vẻ, rạng rỡ, ngập tràn hạnh phúc
+                    và thành công với mọi dự định của mình! 🎉
+                </p>
+                <p class="text-xs text-pink-300/90 italic">
+                    Chiếc web 3D và hộp nhạc này được làm riêng dành tặng bạn trong ngày đặc biệt hôm nay. Hãy cùng lắng
+                    nghe giai điệu hộp nhạc du dương nhé! 🎵
+                </p>
+            </div>
+
+            <button id="birthday-close-btn"
+                class="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-orbitron font-bold text-xs rounded-xl shadow-lg shadow-pink-500/30 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
+                TIẾP TỤC KHÁM PHÁ HÀNH LANG & BÁNH 3D
+            </button>
+        </div>
+    </div>
+
+    <!-- Three.js logic script -->
+    <script>
+        // --- DATA STRUCTURE FOR EXHIBITS ---
+        const exhibitsData = [
+            {
+                id: 0,
+                title: "GIỚI THIỆU BẢN THÂN",
+                subtitle: "Full-Stack Developer & Creative Coder",
+                category: "THÔNG TIN CÁ NHÂN",
+                positionZ: -12,
+                side: "left",
+                summary: "Chào mừng bạn đến với không gian 3D của tôi. Tôi là một lập trình viên đam mê sáng tạo các trải nghiệm web độc đáo.",
+                detailsHTML: `
+                    <div class="flex flex-col sm:flex-row gap-6 items-center">
+                        <div class="w-32 h-32 rounded-full border-2 border-cyan-400 p-1 flex-shrink-0 bg-slate-900 overflow-hidden shadow-lg shadow-cyan-500/30">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Developer" alt="Avatar" class="w-full h-full object-cover">
+                        </div>
+                        <div class="space-y-3">
+                            <h4 class="text-xl font-bold text-cyan-400 font-orbitron">NGUYỄN Hoàng Trọng Ân</h4>
+                            <p class="text-xs text-cyan-300 font-semibold tracking-wider">KỸ SƯ CÔNG NGHỆ THÔNG TIN</p>
+                            <p class="text-sm text-gray-300">4 Năm học tại trường với những nghiên cứu khoa học, khoa học máy tính, 3D, AI,...</p>
+                            <div class="flex gap-2 pt-2">
+                                <span class="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-gray-300">TP. Hồ Chí Minh,Bến Cát</span>
+                                <span class="px-2.5 py-1 bg-green-500/20 border border-green-500/40 rounded-md text-xs text-green-300">Sẵn sàng làm việc</span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 1,
+                title: "KỸ NĂNG & CÔNG NGHỆ",
+                subtitle: "Tech Stack & Công cụ chuyên môn",
+                category: "KỸ NĂNG",
+                positionZ: -28,
+                side: "right",
+                summary: "Làm chủ các công nghệ web hiện đại từ Frontend, 3D Graphics cho tới Backend Cloud.",
+                detailsHTML: `
+                    <div class="space-y-4">
+                        <p>Danh sách các công nghệ và công cụ tôi sử dụng thành thạo trong các dự án thực tế:</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                            <div class="p-3 bg-white/5 rounded-xl border border-white/10">
+                                <div class="text-cyan-400 font-orbitron text-xs font-bold mb-1"><i class="fab fa-js mr-2"></i>FRONTEND & 3D</div>
+                                <div class="text-xs text-gray-300">Three.js, WebGL, React.js, Next.js, Vue.js, Tailwind CSS, TypeScript</div>
+                            </div>
+                            <div class="p-3 bg-white/5 rounded-xl border border-white/10">
+                                <div class="text-cyan-400 font-orbitron text-xs font-bold mb-1"><i class="fas fa-server mr-2"></i>BACKEND & DATABASE</div>
+                                <div class="text-xs text-gray-300">Node.js, Express, Python, PostgreSQL, MongoDB, GraphQL, REST API</div>
+                            </div>
+                            <div class="p-3 bg-white/5 rounded-xl border border-white/10">
+                                <div class="text-cyan-400 font-orbitron text-xs font-bold mb-1"><i class="fas fa-cubes mr-2"></i>THIẾT KẾ & 3D MODELING</div>
+                                <div class="text-xs text-gray-300">Blender, Figma, UI/UX Design, Shader Programming (GLSL)</div>
+                            </div>
+                            <div class="p-3 bg-white/5 rounded-xl border border-white/10">
+                                <div class="text-cyan-400 font-orbitron text-xs font-bold mb-1"><i class="fas fa-tools mr-2"></i>DEVOPS & CI/CD</div>
+                                <div class="text-xs text-gray-300">Git, Docker, AWS, Vercel, CI/CD Workflows, Testing (Jest/Cypress)</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 2,
+                title: "DỰ ÁN NỔI BẬT",
+                subtitle: "Các sản phẩm sáng tạo nổi bật. bốc phét chứ chưa có up lên Git =)))",
+                category: "PORTFOLIO",
+                positionZ: -44,
+                side: "left",
+                summary: "Tuyển tập các dự án Web 3D, Thương mại điện tử và Ứng dụng SaaS từng thực hiện.",
+                link: "https://github.com",
+                detailsHTML: `
+                    <div class="space-y-4">
+                        <div class="border border-cyan-500/30 rounded-xl overflow-hidden bg-black/40">
+                            <div class="p-4 bg-cyan-950/30 border-b border-white/10 flex justify-between items-center">
+                                <h5 class="font-orbitron font-bold text-cyan-300 text-base">1. Metaverse Showroom 3D</h5>
+                                <span class="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 rounded">Three.js / React</span>
+                            </div>
+                            <p class="p-4 text-xs text-gray-300">Không gian trưng bày sản phẩm 3D tương tác thời gian thực cho thương hiệu thời trang cao cấp, tối ưu hóa FPS mượt mà trên di động.</p>
+                        </div>
+
+                        <div class="border border-cyan-500/30 rounded-xl overflow-hidden bg-black/40">
+                            <div class="p-4 bg-cyan-950/30 border-b border-white/10 flex justify-between items-center">
+                                <h5 class="font-orbitron font-bold text-cyan-300 text-base">2. AI-Powered Analytics Dashboard</h5>
+                                <span class="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 rounded">Next.js / Python</span>
+                            </div>
+                            <p class="p-4 text-xs text-gray-300">Giao diện phân tích dữ liệu thông minh tích hợp biểu đồ D3.js tương tác và gợi ý tự động bằng mô hình AI.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 3,
+                title: "HÀNH TRÌNH TỰ PHÁT TRIỂN",
+                subtitle: "Kinh nghiệm làm việc & Học vấn",
+                category: "KINH NGHIỆM",
+                positionZ: -60,
+                side: "right",
+                summary: "Tham gia các dự án nghiên cứu khoa học tại trường",
+                detailsHTML: `
+                    <div class="relative border-l-2 border-cyan-500/40 ml-3 pl-6 space-y-6">
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-cyan-400 border-4 border-slate-900"></div>
+                            <span class="text-xs font-orbitron text-cyan-400 font-semibold">2022 - HIỆN TẠI</span>
+                            <h5 class="text-sm font-bold text-white">Senior Web 3D Engineer - TechCorp Inc.</h5>
+                            <p class="text-xs text-gray-300 mt-1">Dẫn dắt đội ngũ phát triển các giải pháp WebGL/Three.js, tăng 40% trải nghiệm người dùng.</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-cyan-400 border-4 border-slate-900"></div>
+                            <span class="text-xs font-orbitron text-cyan-400 font-semibold">2020 - 2022</span>
+                            <h5 class="text-sm font-bold text-white">Full-Stack Developer - Digital Agency X</h5>
+                            <p class="text-xs text-gray-300 mt-1">Xây dựng hơn 15+ ứng dụng web React & Node.js cho các khách hàng quốc tế.</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-cyan-400 border-4 border-slate-900"></div>
+                            <span class="text-xs font-orbitron text-cyan-400 font-semibold">2016 - 2020</span>
+                            <h5 class="text-sm font-bold text-white">Công Nghệ thông Tin tại trường TDMU</h5>
+                            <p class="text-xs text-gray-300 mt-1">Tốt nghiệp loại Giỏi, chuyên ngành Công nghệ phần mềm & Đồ họa máy tính.</p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 4,
+                title: "MỐI LIÊN HỆ CỦA TÔI",
+                subtitle: "Bí mật dành cho bạn",
+                category: "MỐI QUAN HỆ",
+                positionZ: -72,
+                side: "left",
+                summary: "Bạn có hứng thú với các mối quan hệ của tôi? nếu có thì tôi xin phép được giới thiệu sơ qua",
+                link: "annguyen332005@gmail.com",
+                detailsHTML: `
+                    <div class="text-center space-y-6 py-4">
+                        <p class="text-gray-300 text-sm leading-relaxed">Có một người bạn mà tôi rất quý, hôm nay lại là sinh nhật của bạn ấy, thế là tôi đã làm một chiếc web nho nhỏ để tặng bạn ấy, mong bạn ấy thích và có một sinh nhật vui vẻ. Những thông tin tôi ghi ở trên để làm cho bà mất cảnh giác thôi, cái cuối này sẽ làm cho bà bất ngờ đó! ✨🎂</p>
+                        
+                        <div class="p-3 bg-pink-500/15 border border-pink-500/40 rounded-xl text-pink-300 text-xs font-orbitron flex items-center justify-center gap-2">
+                            <i class="fas fa-gift text-pink-400"></i>
+                            <span>HÃY TIẾP TỤC ĐI VỀ CUỐI HÀNH LANG ĐỂ MỞ HỘP NHẠC BÍ MẬT...</span>
+                        </div>
+
+                        <div class="flex justify-center gap-4">
+                            <a href="#" class="w-12 h-12 rounded-xl bg-white/5 border border-cyan-400/30 flex items-center justify-center text-cyan-400 text-xl hover:bg-cyan-500 hover:text-black transition-all">
+                                <i class="fab fa-github"></i>
+                            </a>
+                            <a href="#" class="w-12 h-12 rounded-xl bg-white/5 border border-cyan-400/30 flex items-center justify-center text-cyan-400 text-xl hover:bg-cyan-500 hover:text-black transition-all">
+                                <i class="fab fa-linkedin-in"></i>
+                            </a>
+                            <a href="#" class="w-12 h-12 rounded-xl bg-white/5 border border-cyan-400/30 flex items-center justify-center text-cyan-400 text-xl hover:bg-cyan-500 hover:text-black transition-all">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="mailto:email@example.com" class="w-12 h-12 rounded-xl bg-white/5 border border-cyan-400/30 flex items-center justify-center text-cyan-400 text-xl hover:bg-cyan-500 hover:text-black transition-all">
+                                <i class="fas fa-envelope"></i>
+                            </a>
+                        </div>
+
+                        <div class="p-4 bg-cyan-950/40 rounded-xl border border-cyan-500/30 text-xs text-cyan-300 font-mono">
+                            EMAIL: annguyen332005@gmail.com | TEL: 0984749309
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        // --- THREE.JS & APP GLOBAL VARIABLES ---
+        let scene, camera, renderer;
+        let controlsEnabled = false;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let prevTime = performance.now();
+
+        // Audio synthesizer via Web Audio API
+        let audioCtx = null;
+        let soundMuted = false;
+
+        // Camera Euler angle limits
+        const pitchObject = new THREE.Object3D();
+        const yawObject = new THREE.Object3D();
+
+        // Interactive Objects / Exhibits
+        const exhibitMeshes = [];
+        let activeExhibit = null;
+        const totalHallLength = 100;
+
+        // 3D Music Box & Hologram Cake Interactive System
+        let musicBoxGroup, musicBoxCrank, hologramCakeGroup, particleSystem, flameMesh;
+        let isCrankWinding = false;
+        let musicBoxPlaying = false;
+        let activeMusicBox = false;
+        let musicBoxEndTimeout = null;
+        let cakeScale = 0.001;
+        let cakeScaleTarget = 0.001;
+        let activeMusicBoxOscillators = [];
+
+        // Dynamic Canvas Textures generator
+        function createTextCanvas(title, subtitle, category) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#080d1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Tech Border
+            ctx.strokeStyle = '#00f0ff';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+            // Glow accent
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
+            ctx.fillRect(30, 30, canvas.width - 60, canvas.height - 60);
+
+            // Category tag
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = 'bold 28px Orbitron, sans-serif';
+            ctx.fillText(`// ${category}`, 60, 90);
+
+            // Title
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 54px Orbitron, sans-serif';
+            ctx.fillText(title, 60, 180);
+
+            // Subtitle
+            ctx.fillStyle = '#8a99ad';
+            ctx.font = '32px Inter, sans-serif';
+            ctx.fillText(subtitle, 60, 240);
+
+            // Decorative lines
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(60, 280);
+            ctx.lineTo(canvas.width - 60, 280);
+            ctx.stroke();
+
+            // Prompt note
+            ctx.fillStyle = '#00f0ff';
+            ctx.font = 'bold 26px Orbitron, sans-serif';
+            ctx.fillText('PRESS [SPACE] TO EXPLORE DETAILS', 60, 420);
+
+            return canvas;
+        }
+
+        // --- PROCEDURAL TEXTURES FOR ENVIRONMENT ---
+        function createTileTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0b0f19';
+            ctx.fillRect(0, 0, 256, 256);
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 256, 256);
+
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 128); ctx.lineTo(256, 128);
+            ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+            ctx.stroke();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        // --- SETUP THREE.JS SCENE ---
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene & Fog
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x04060a);
+            scene.fog = new THREE.FogExp2(0x04060a, 0.025);
+
+            // Camera setup FPS style
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+            pitchObject.add(camera);
+            yawObject.add(pitchObject);
+            yawObject.position.set(0, 1.7, 5); // Eyes level at 1.7m
+            scene.add(yawObject);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            // Lighting System
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+
+            // Build Corridor Geometry
+            buildCorridor();
+
+            // Build Exhibits
+            buildExhibits();
+
+            // Build Music Box Pedestal & Hologram Cake
+            buildMusicBoxPedestal();
+
+            // Window Resize Listener
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        // --- BUILD SCENERY: SCI-FI CORRIDOR ---
+        function buildCorridor() {
+            const width = 8;
+            const height = 5;
+            const length = totalHallLength;
+
+            const tileTexture = createTileTexture();
+            tileTexture.repeat.set(8, 95);
+
+            // Materials
+            const floorMat = new THREE.MeshStandardMaterial({
+                map: tileTexture,
+                roughness: 0.2,
+                metalness: 0.8
+            });
+
+            const wallMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+
+            const ceilingMat = new THREE.MeshStandardMaterial({
+                color: 0x090d16,
+                roughness: 0.8
+            });
+
+            // Floor
+            const floorGeo = new THREE.PlaneGeometry(width, length);
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.z = -length / 2 + 10;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Ceiling
+            const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.set(0, height, -length / 2 + 10);
+            scene.add(ceiling);
+
+            // Left Wall
+            const wallGeo = new THREE.PlaneGeometry(length, height);
+            const leftWall = new THREE.Mesh(wallGeo, wallMat);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.position.set(-width / 2, height / 2, -length / 2 + 10);
+            scene.add(leftWall);
+
+            // Right Wall
+            const rightWall = new THREE.Mesh(wallGeo, wallMat);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.position.set(width / 2, height / 2, -length / 2 + 10);
+            scene.add(rightWall);
+
+            // Back Wall (Entrance)
+            const endWallGeo = new THREE.PlaneGeometry(width, height);
+            const backWall = new THREE.Mesh(endWallGeo, wallMat);
+            backWall.position.set(0, height / 2, 10);
+            scene.add(backWall);
+
+            // Far End Wall
+            const farWall = new THREE.Mesh(endWallGeo, wallMat);
+            farWall.rotation.y = Math.PI;
+            farWall.position.set(0, height / 2, -length + 10);
+            scene.add(farWall);
+
+            // Ceiling Neon Strip Lights along corridor
+            for (let z = 5; z > -length + 10; z -= 8) {
+                const isNearMusicBox = (z <= -75);
+                const lightColor = isNearMusicBox ? 0xff007f : 0x00f0ff;
+
+                // Ceiling Strip
+                const lightStripGeo = new THREE.BoxGeometry(width - 1, 0.1, 0.4);
+                const lightMat = new THREE.MeshBasicMaterial({ color: lightColor });
+                const lightMesh = new THREE.Mesh(lightStripGeo, lightMat);
+                lightMesh.position.set(0, height - 0.05, z);
+                scene.add(lightMesh);
+
+                // Point Light source
+                const pLight = new THREE.PointLight(lightColor, isNearMusicBox ? 1.1 : 0.8, 12);
+                pLight.position.set(0, height - 0.5, z);
+                scene.add(pLight);
+            }
+        }
+
+        // --- BUILD EXHIBIT FRAMES & TEXTURES ---
+        function buildExhibits() {
+            exhibitsData.forEach((data) => {
+                const group = new THREE.Group();
+
+                // Frame Geometry
+                const frameWidth = 4.2;
+                const frameHeight = 2.3;
+                const frameGeo = new THREE.BoxGeometry(frameWidth, frameHeight, 0.15);
+                const frameMat = new THREE.MeshStandardMaterial({
+                    color: 0x1e293b,
+                    metalness: 0.9,
+                    roughness: 0.2
+                });
+                const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+                group.add(frameMesh);
+
+                // Canvas Screen
+                const canvasTexture = new THREE.CanvasTexture(
+                    createTextCanvas(data.title, data.subtitle, data.category)
+                );
+                const screenGeo = new THREE.PlaneGeometry(frameWidth - 0.2, frameHeight - 0.2);
+                const screenMat = new THREE.MeshBasicMaterial({ map: canvasTexture });
+                const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+                screenMesh.position.z = 0.09;
+                group.add(screenMesh);
+
+                // Neon Outer Border (Glowing Mesh)
+                const glowGeo = new THREE.BoxGeometry(frameWidth + 0.1, frameHeight + 0.1, 0.05);
+                const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.5 });
+                const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+                glowMesh.position.z = -0.02;
+                group.add(glowMesh);
+
+                // Spotlight above exhibit
+                const spotLight = new THREE.SpotLight(0x00f0ff, 2, 8, Math.PI / 4, 0.5);
+                spotLight.position.set(0, 2, 1.5);
+                spotLight.target = frameMesh;
+                group.add(spotLight);
+
+                // Position exhibit in hallway
+                let xPos = 0;
+                let rotY = 0;
+
+                if (data.side === "left") {
+                    xPos = -3.85;
+                    rotY = Math.PI / 2;
+                } else if (data.side === "right") {
+                    xPos = 3.85;
+                    rotY = -Math.PI / 2;
+                } else {
+                    xPos = 0;
+                    rotY = 0;
+                }
+
+                group.position.set(xPos, 2.2, data.positionZ);
+                group.rotation.y = rotY;
+
+                scene.add(group);
+
+                // Store reference for interactivity checking
+                exhibitMeshes.push({
+                    data: data,
+                    group: group,
+                    glowMesh: glowMesh,
+                    spotLight: spotLight,
+                    worldPosition: new THREE.Vector3(xPos, 1.7, data.positionZ)
+                });
+            });
+        }
+
+        // --- SPECIAL END ITEM: 3D MUSIC BOX & BIRTHDAY CAKE ---
+        function buildMusicBoxPedestal() {
+            const zPos = -85;
+
+            // Pedestal Table Base
+            const tableGeo = new THREE.CylinderGeometry(1.3, 1.6, 1.1, 32);
+            const tableMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                metalness: 0.85,
+                roughness: 0.25
+            });
+            const tableMesh = new THREE.Mesh(tableGeo, tableMat);
+            tableMesh.position.set(0, 0.55, zPos);
+            tableMesh.receiveShadow = true;
+            scene.add(tableMesh);
+
+            // Table Glowing Top Neon Ring
+            const ringGeo = new THREE.TorusGeometry(1.3, 0.04, 16, 48);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            ringMesh.position.set(0, 1.11, zPos);
+            scene.add(ringMesh);
+
+            // Spotlight directly over Music Box
+            const spotLight = new THREE.SpotLight(0xff007f, 3.8, 12, Math.PI / 3, 0.4);
+            spotLight.position.set(0, 4.6, zPos);
+            spotLight.target = tableMesh;
+            scene.add(spotLight);
+
+            // Music Box Main Group
+            musicBoxGroup = new THREE.Group();
+            musicBoxGroup.position.set(0, 1.12, zPos);
+
+            // Wooden Main Body
+            const boxBodyGeo = new THREE.BoxGeometry(1.0, 0.55, 0.8);
+            const boxBodyMat = new THREE.MeshStandardMaterial({
+                color: 0x422006,
+                roughness: 0.35,
+                metalness: 0.2
+            });
+            const boxBody = new THREE.Mesh(boxBodyGeo, boxBodyMat);
+            boxBody.position.y = 0.275;
+            musicBoxGroup.add(boxBody);
+
+            // Gold Trims & Decorative Edges
+            const goldMat = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b,
+                metalness: 0.92,
+                roughness: 0.15
+            });
+
+            const topTrimGeo = new THREE.BoxGeometry(1.05, 0.06, 0.85);
+            const topTrim = new THREE.Mesh(topTrimGeo, goldMat);
+            topTrim.position.y = 0.56;
+            musicBoxGroup.add(topTrim);
+
+            const bottomTrimGeo = new THREE.BoxGeometry(1.05, 0.06, 0.85);
+            const bottomTrim = new THREE.Mesh(bottomTrimGeo, goldMat);
+            bottomTrim.position.y = 0.03;
+            musicBoxGroup.add(bottomTrim);
+
+            // Front Emblem Plate
+            const plateGeo = new THREE.BoxGeometry(0.38, 0.18, 0.02);
+            const plate = new THREE.Mesh(plateGeo, goldMat);
+            plate.position.set(0, 0.28, 0.41);
+            musicBoxGroup.add(plate);
+
+            // Music Box Key Crank (Cần xoay kim bên sườn)
+            musicBoxCrank = new THREE.Group();
+            musicBoxCrank.position.set(0.51, 0.35, 0);
+
+            const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.25, 12);
+            rodGeo.rotateZ(Math.PI / 2);
+            const rod = new THREE.Mesh(rodGeo, goldMat);
+            rod.position.x = 0.125;
+            musicBoxCrank.add(rod);
+
+            const handleGeo = new THREE.TorusGeometry(0.12, 0.03, 12, 24);
+            const handle = new THREE.Mesh(handleGeo, goldMat);
+            handle.position.x = 0.25;
+            handle.rotation.y = Math.PI / 2;
+            musicBoxCrank.add(handle);
+
+            musicBoxGroup.add(musicBoxCrank);
+
+            // --- HOLOGRAM 3D BIRTHDAY CAKE (Emerges when cranked) ---
+            hologramCakeGroup = new THREE.Group();
+            hologramCakeGroup.position.set(0, 0.65, 0);
+            hologramCakeGroup.scale.set(0.001, 0.001, 0.001);
+
+            const holoCakeMat = new THREE.MeshStandardMaterial({
+                color: 0xff00aa,
+                emissive: 0xff00aa,
+                emissiveIntensity: 0.65,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.85
+            });
+
+            // Tier 1 (Base cake)
+            const cake1Geo = new THREE.CylinderGeometry(0.42, 0.42, 0.24, 24);
+            const cake1 = new THREE.Mesh(cake1Geo, holoCakeMat);
+            cake1.position.y = 0.12;
+            hologramCakeGroup.add(cake1);
+
+            // Tier 2 (Top cake)
+            const cake2Geo = new THREE.CylinderGeometry(0.26, 0.26, 0.18, 24);
+            const cake2 = new THREE.Mesh(cake2Geo, holoCakeMat);
+            cake2.position.y = 0.33;
+            hologramCakeGroup.add(cake2);
+
+            // Candle
+            const candleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.18, 12);
+            const candleMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+            const candle = new THREE.Mesh(candleGeo, candleMat);
+            candle.position.y = 0.51;
+            hologramCakeGroup.add(candle);
+
+            // Candle Flame
+            const flameGeo = new THREE.SphereGeometry(0.05, 12, 12);
+            flameGeo.scale(1, 1.6, 1);
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xff3d00 });
+            flameMesh = new THREE.Mesh(flameGeo, flameMat);
+            flameMesh.position.y = 0.64;
+            hologramCakeGroup.add(flameMesh);
+
+            musicBoxGroup.add(hologramCakeGroup);
+
+            // Sparkle Particles Orbiting
+            const particleCount = 70;
+            const particleGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 1.6;
+                positions[i + 1] = Math.random() * 2.2;
+                positions[i + 2] = (Math.random() - 0.5) * 1.6;
+            }
+
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleMat = new THREE.PointsMaterial({
+                color: 0xffe066,
+                size: 0.07,
+                transparent: true,
+                opacity: 0
+            });
+
+            particleSystem = new THREE.Points(particleGeo, particleMat);
+            musicBoxGroup.add(particleSystem);
+
+            scene.add(musicBoxGroup);
+        }
+
+        // --- AUDIO CONTROLLER & PLAYLIST ---
+        const playlist = [
+            { title: "Chill Music", src: "music/music_chill.mp3" }
+        ];
+
+        let currentTrackIndex = 0;
+        const bgAudio = new Audio();
+        bgAudio.volume = 0.85;
+
+        function playTrack(index) {
+            if (playlist.length === 0) return;
+            currentTrackIndex = (index + playlist.length) % playlist.length;
+            bgAudio.src = playlist[currentTrackIndex].src;
+            if (!soundMuted && !musicBoxPlaying) {
+                bgAudio.play().catch(e => console.log("Trình duyệt chờ tương tác:", e));
+            }
+        }
+
+        bgAudio.addEventListener('ended', () => {
+            playTrack(currentTrackIndex + 1);
+        });
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (!bgAudio.src) {
+                playTrack(0);
+            } else if (bgAudio.paused && !soundMuted && !musicBoxPlaying) {
+                bgAudio.play().catch(e => console.log(e));
+            }
+        }
+
+        function playFootstepSound() {
+            if (soundMuted || musicBoxPlaying || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.28);
+
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.28);
+            } catch (e) { }
+        }
+
+        function playHoverBeep() {
+            if (soundMuted || musicBoxPlaying || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) { }
+        }
+
+        // --- WEB AUDIO API: MECHANICAL MUSIC BOX SYNTHESIZER ---
+        function stopAllMusicBoxTones() {
+            activeMusicBoxOscillators.forEach(osc => {
+                try { osc.stop(); } catch (e) { }
+            });
+            activeMusicBoxOscillators = [];
+            if (musicBoxEndTimeout) {
+                clearTimeout(musicBoxEndTimeout);
+                musicBoxEndTimeout = null;
+            }
+        }
+
+        function playMusicBoxTine(freq, noteTime, duration = 1.6) {
+            if (soundMuted || !audioCtx) return;
+            try {
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                const gain2 = audioCtx.createGain();
+                const master = audioCtx.createGain();
+
+                // Fundamental bell tine (triangle wave)
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(freq, noteTime);
+
+                // High harmonic sheen (metallic overtone)
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(freq * 2.756, noteTime);
+
+                gain1.gain.setValueAtTime(0.25, noteTime);
+                gain1.gain.exponentialRampToValueAtTime(0.0003, noteTime + duration);
+
+                gain2.gain.setValueAtTime(0.05, noteTime);
+                gain2.gain.exponentialRampToValueAtTime(0.0001, noteTime + Math.min(0.35, duration * 0.4));
+
+                osc1.connect(gain1);
+                osc2.connect(gain2);
+                gain1.connect(master);
+                gain2.connect(master);
+                master.connect(audioCtx.destination);
+
+                osc1.start(noteTime);
+                osc1.stop(noteTime + duration);
+                osc2.start(noteTime);
+                osc2.stop(noteTime + duration);
+
+                activeMusicBoxOscillators.push(osc1, osc2);
+            } catch (e) { console.warn(e); }
+        }
+
+        function playRatchetClick(clickTime) {
+            if (soundMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, clickTime);
+                osc.frequency.exponentialRampToValueAtTime(180, clickTime + 0.025);
+                gain.gain.setValueAtTime(0.08, clickTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.025);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(clickTime);
+                osc.stop(clickTime + 0.025);
+                activeMusicBoxOscillators.push(osc);
+            } catch (e) { }
+        }
+
+        // Nhạc hộp nhạc phát từ 30s đến 1p (~45 giây)
+        function playHappyBirthdayMelody() {
+            if (!audioCtx) return;
+            stopAllMusicBoxTones();
+
+            const NOTES = {
+                'C3': 130.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00,
+                'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
+                'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77,
+                'C6': 1046.50, 'D6': 1174.66, 'E6': 1318.51, 'F6': 1396.91, 'G6': 1567.98
+            };
+
+            let now = audioCtx.currentTime + 0.1;
+
+            // 1. Tiếng cót cơ khí lên dây cót (~2.5 giây)
+            for (let i = 0; i < 14; i++) {
+                playRatchetClick(now + i * 0.16);
+            }
+            now += 2.5;
+
+            // 2. Dạo đầu chuông êm dịu (~3 giây)
+            const intro = [
+                ['G4', 0.6], ['C5', 0.6], ['E5', 0.6], ['G5', 1.2]
+            ];
+            intro.forEach(([note, dur]) => {
+                playMusicBoxTine(NOTES[note], now, dur * 1.8);
+                now += dur;
+            });
+            now += 0.4;
+
+            // 3. Đoạn 1: Giai điệu Happy Birthday trầm ấm kết hợp nốt bè (~16 giây)
+            const verse1 = [
+                ['G4', 0.75, 'C4'], ['G4', 0.25, null], ['A4', 1.0, null], ['G4', 1.0, null],
+                ['C5', 1.0, 'E4'], ['B4', 2.0, 'G3'],
+                ['G4', 0.75, 'G3'], ['G4', 0.25, null], ['A4', 1.0, null], ['G4', 1.0, null],
+                ['D5', 1.0, 'F4'], ['C5', 2.0, 'E4'],
+                ['G4', 0.75, 'C4'], ['G4', 0.25, null], ['G5', 1.0, 'E4'], ['E5', 1.0, 'G4'],
+                ['C5', 1.0, 'A4'], ['B4', 1.0, null], ['A4', 2.0, 'F3'],
+                ['F5', 0.75, 'F3'], ['F5', 0.25, null], ['E5', 1.0, 'C4'], ['C5', 1.0, 'E4'],
+                ['D5', 1.0, 'G3'], ['C5', 2.6, 'C3']
+            ];
+
+            const tempo1 = 0.62;
+            verse1.forEach(([mNote, dur, bNote]) => {
+                const noteDur = dur * tempo1;
+                playMusicBoxTine(NOTES[mNote], now, Math.max(1.5, noteDur * 1.8));
+                if (bNote) {
+                    playMusicBoxTine(NOTES[bNote], now, 2.2);
+                }
+                now += noteDur;
+            });
+
+            now += 0.8;
+
+            // 4. Đoạn chuyển tiếp ngân vang (~2.5 giây)
+            const interlude = [
+                ['E5', 0.5], ['G5', 0.5], ['C6', 0.7], ['G5', 0.7]
+            ];
+            interlude.forEach(([note, dur]) => {
+                playMusicBoxTine(NOTES[note], now, dur * 1.6);
+                now += dur;
+            });
+            now += 0.5;
+
+            // 5. Đoạn 2: Quãng cao trong trẻo, chùm nốt rực rỡ lấp lánh (~17 giây)
+            const verse2 = [
+                ['G5', 0.75, 'C5'], ['G5', 0.25, null], ['A5', 1.0, 'E5'], ['G5', 1.0, null],
+                ['C6', 1.0, 'G5'], ['B5', 2.0, 'D5'],
+                ['G5', 0.75, 'D5'], ['G5', 0.25, null], ['A5', 1.0, 'F5'], ['G5', 1.0, null],
+                ['D6', 1.0, 'B5'], ['C6', 2.0, 'G5'],
+                ['G5', 0.75, 'C5'], ['G5', 0.25, null], ['G6', 1.0, 'E5'], ['E6', 1.0, 'G5'],
+                ['C6', 1.0, 'A5'], ['B5', 1.0, 'E5'], ['A5', 2.0, 'F5'],
+                ['F6', 0.75, 'D5'], ['F6', 0.25, null], ['E6', 1.0, 'C5'], ['C6', 1.0, 'G5'],
+                ['D6', 1.0, 'F5'], ['C6', 3.0, 'C5']
+            ];
+
+            const tempo2 = 0.64;
+            verse2.forEach(([mNote, dur, bNote]) => {
+                const noteDur = dur * tempo2;
+                playMusicBoxTine(NOTES[mNote], now, Math.max(1.6, noteDur * 2.0));
+                if (bNote) {
+                    playMusicBoxTine(NOTES[bNote], now, 2.0);
+                }
+                now += noteDur;
+            });
+
+            // 6. Hợp âm chuông kết thúc lắng đọng (~4 giây)
+            now += 0.4;
+            playMusicBoxTine(NOTES['C4'], now, 3.5);
+            playMusicBoxTine(NOTES['E4'], now + 0.1, 3.5);
+            playMusicBoxTine(NOTES['G4'], now + 0.2, 3.5);
+            playMusicBoxTine(NOTES['C5'], now + 0.3, 4.0);
+            playMusicBoxTine(NOTES['E5'], now + 0.4, 4.2);
+            playMusicBoxTine(NOTES['C6'], now + 0.5, 4.5);
+            now += 4.5;
+
+            // Tổng thời gian: ~45 giây
+            const totalDurationSec = now - audioCtx.currentTime;
+
+            musicBoxEndTimeout = setTimeout(() => {
+                finishMusicBox();
+            }, totalDurationSec * 1000);
+        }
+
+        // Kích hoạt xoay cần cót và phát nhạc hộp nhạc
+        function triggerMusicBoxAction() {
+            if (isCrankWinding || musicBoxPlaying) return;
+            initAudio();
+
+            // TẮT HOÀN TOÀN NHẠC NỀN TRONG THỜI GIAN PHÁT HỘP NHẠC
+            if (bgAudio && !bgAudio.paused) {
+                bgAudio.pause();
+            }
+
+            musicBoxPlaying = true;
+            isCrankWinding = true;
+            cakeScaleTarget = 1.0;
+
+            // Phát bản nhạc hộp nhạc Happy Birthday (~45 giây)
+            playHappyBirthdayMelody();
+
+            // Hiển thị modal chúc mừng sinh nhật
+            setTimeout(() => {
+                const modal = document.getElementById('birthday-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                    document.exitPointerLock();
+                }
+            }, 1000);
+        }
+
+        // Khi hết thời gian phát nhạc (~45s), hồi phục trạng thái âm thanh
+        function finishMusicBox() {
+            musicBoxPlaying = false;
+            isCrankWinding = false;
+
+            // Bật lại nhạc nền nếu người dùng không bấm mute
+            if (!soundMuted && bgAudio && bgAudio.src) {
+                bgAudio.play().catch(e => console.log(e));
+            }
+        }
+
+        // --- NAVIGATION & CONTROLS ---
+        function setupControls() {
+            // Keyboard listeners
+            const onKeyDown = (event) => {
+                switch (event.code) {
+                    case 'KeyW': case 'ArrowUp': moveForward = true; break;
+                    case 'KeyS': case 'ArrowDown': moveBackward = true; break;
+                    case 'KeyA': case 'ArrowLeft': moveLeft = true; break;
+                    case 'KeyD': case 'ArrowRight': moveRight = true; break;
+                    case 'KeyE': case 'Space':
+                        if (activeMusicBox) {
+                            triggerMusicBoxAction();
+                        } else if (activeExhibit) {
+                            openExhibitModal(activeExhibit.data);
+                        }
+                        break;
+                }
+            };
+
+            const onKeyUp = (event) => {
+                switch (event.code) {
+                    case 'KeyW': case 'ArrowUp': moveForward = false; break;
+                    case 'KeyS': case 'ArrowDown': moveBackward = false; break;
+                    case 'KeyA': case 'ArrowLeft': moveLeft = false; break;
+                    case 'KeyD': case 'ArrowRight': moveRight = false; break;
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            // Pointer Lock Mouse look
+            document.addEventListener('mousemove', (event) => {
+                if (!controlsEnabled) return;
+
+                const movementX = event.movementX || 0;
+                const movementY = event.movementY || 0;
+
+                yawObject.rotation.y -= movementX * 0.0022;
+                pitchObject.rotation.x -= movementY * 0.0022;
+
+                // Limit vertical look angle
+                pitchObject.rotation.x = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, pitchObject.rotation.x));
+            });
+
+            // Click chuột khi đang khóa con trỏ để tương tác
+            document.addEventListener('click', () => {
+                if (controlsEnabled && activeMusicBox) {
+                    triggerMusicBoxAction();
+                }
+            });
+
+            // Mobile Controls Listeners
+            const bindTouchBtn = (id, setFlag) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); setFlag(true); });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); setFlag(false); });
+                btn.addEventListener('mousedown', () => setFlag(true));
+                btn.addEventListener('mouseup', () => setFlag(false));
+            };
+
+            bindTouchBtn('btn-forward', (val) => moveForward = val);
+            bindTouchBtn('btn-backward', (val) => moveBackward = val);
+            bindTouchBtn('btn-left', (val) => moveLeft = val);
+            bindTouchBtn('btn-right', (val) => moveRight = val);
+
+            document.getElementById('btn-interact').addEventListener('click', () => {
+                if (activeMusicBox) {
+                    triggerMusicBoxAction();
+                } else if (activeExhibit) {
+                    openExhibitModal(activeExhibit.data);
+                }
+            });
+        }
+
+        // --- POINTER LOCK CONTROLLER ---
+        function requestPointerLock() {
+            initAudio();
+            document.body.requestPointerLock();
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                controlsEnabled = true;
+                document.getElementById('start-overlay').classList.add('opacity-0', 'pointer-events-none');
+            } else {
+                controlsEnabled = false;
+                if (document.getElementById('modal-overlay').classList.contains('hidden') &&
+                    document.getElementById('birthday-modal').classList.contains('hidden')) {
+                    document.getElementById('start-overlay').classList.remove('opacity-0', 'pointer-events-none');
+                }
+            }
+        });
+
+        // --- EXHIBIT MODAL SYSTEM ---
+        function openExhibitModal(data) {
+            const modal = document.getElementById('modal-overlay');
+            document.getElementById('modal-tag').innerText = `GTI Exhibition // ${data.category}`;
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-body').innerHTML = data.detailsHTML;
+
+            const actionBtn = document.getElementById('modal-action-btn');
+            if (data.link) {
+                actionBtn.classList.remove('hidden');
+                actionBtn.onclick = () => window.open(data.link, '_blank');
+            } else {
+                actionBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+            // Exit pointer lock for UI interaction
+            document.exitPointerLock();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal-overlay');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                requestPointerLock();
+            }, 300);
+        }
+
+        // --- TELEPORT NAVIGATION ---
+        function teleportToZ(targetZ) {
+            const startZ = yawObject.position.z;
+            const duration = 650;
+            const startTime = performance.now();
+
+            function animateTeleport(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+                yawObject.position.z = startZ + (targetZ - startZ) * ease;
+                yawObject.position.x = 0;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateTeleport);
+                }
+            }
+            requestAnimationFrame(animateTeleport);
+        }
+
+        function teleportToExhibit(index) {
+            const target = exhibitsData[index];
+            if (!target) return;
+            teleportToZ(target.positionZ + 3);
+        }
+
+        // --- ANIMATION & PHYSICS LOOP ---
+        let lastFootstepTime = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if (controlsEnabled) {
+                // Friction / Damping
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const moveSpeed = 18.0;
+                if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta;
+
+                // Move Camera Position
+                yawObject.translateX(-velocity.x * delta);
+                yawObject.translateZ(velocity.z * delta);
+
+                // Footstep audio trigger
+                if ((moveForward || moveBackward || moveLeft || moveRight) && time - lastFootstepTime > 400) {
+                    playFootstepSound();
+                    lastFootstepTime = time;
+                }
+
+                // Corridor Boundaries Collision Constraints
+                yawObject.position.x = Math.max(-3.2, Math.min(3.2, yawObject.position.x));
+                yawObject.position.z = Math.max(-totalHallLength + 12, Math.min(8, yawObject.position.z));
+
+                // Bàn đặt hộp nhạc ở Z = -85 (chặn va chạm để không lọt vào trong bệ)
+                if (yawObject.position.z < -83.4 && Math.abs(yawObject.position.x) < 1.4) {
+                    yawObject.position.z = -83.4;
+                }
+            }
+
+            // Update Progress Bar
+            const currentZ = yawObject.position.z;
+            const progressPercent = Math.min(100, Math.max(0, Math.round(((5 - currentZ) / totalHallLength) * 100)));
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            document.getElementById('progress-text').innerText = `${progressPercent}%`;
+
+            // Animate Music Box Crank & Hologram Cake
+            if (isCrankWinding || musicBoxPlaying) {
+                if (musicBoxCrank) musicBoxCrank.rotation.x += 0.06;
+            }
+
+            if (hologramCakeGroup) {
+                cakeScale += (cakeScaleTarget - cakeScale) * 0.04;
+                hologramCakeGroup.scale.set(cakeScale, cakeScale, cakeScale);
+
+                if (cakeScale > 0.05) {
+                    hologramCakeGroup.rotation.y += 0.015;
+                    if (flameMesh) {
+                        const flicker = 1 + Math.sin(time * 0.02) * 0.15;
+                        flameMesh.scale.set(flicker, 1 + Math.cos(time * 0.025) * 0.2, flicker);
+                    }
+                    if (particleSystem) {
+                        particleSystem.material.opacity = Math.min(0.85, cakeScale);
+                        const pos = particleSystem.geometry.attributes.position.array;
+                        for (let i = 1; i < pos.length; i += 3) {
+                            pos[i] += 0.012;
+                            if (pos[i] > 2.2) pos[i] = 0;
+                        }
+                        particleSystem.geometry.attributes.position.needsUpdate = true;
+                    }
+                }
+            }
+
+            // Check Proximity to Music Box at Z = -85
+            const distToMusicBox = yawObject.position.distanceTo(new THREE.Vector3(0, 1.7, -85));
+            const promptEl = document.getElementById('interaction-prompt');
+            const crosshair = document.getElementById('crosshair');
+
+            if (distToMusicBox < 4.4) {
+                activeMusicBox = true;
+                activeExhibit = null;
+                promptEl.classList.remove('opacity-0', 'translate-y-4');
+                if (musicBoxPlaying) {
+                    document.getElementById('prompt-text').innerText = "HỘP NHẠC ĐANG PHÁT DU DƯƠNG...";
+                } else {
+                    document.getElementById('prompt-text').innerText = "XOAY KIM HỘP NHẠC (NHẤN SPACE / E / CLICK)";
+                }
+                crosshair.classList.remove('reticle-interact');
+                crosshair.classList.add('reticle-musicbox');
+            } else {
+                activeMusicBox = false;
+                crosshair.classList.remove('reticle-musicbox');
+
+                // Check Nearest Exhibit Proximity
+                let nearest = null;
+                let minDistance = 4.5;
+
+                exhibitMeshes.forEach((exhibit) => {
+                    const dist = yawObject.position.distanceTo(exhibit.worldPosition);
+                    if (dist < minDistance) {
+                        nearest = exhibit;
+                        minDistance = dist;
+                    }
+                    if (dist < 6) {
+                        exhibit.glowMesh.material.opacity = 0.9;
+                        exhibit.spotLight.intensity = 3.5;
+                    } else {
+                        exhibit.glowMesh.material.opacity = 0.3;
+                        exhibit.spotLight.intensity = 1.0;
+                    }
+                });
+
+                if (nearest) {
+                    if (activeExhibit !== nearest) {
+                        playHoverBeep();
+                        activeExhibit = nearest;
+                    }
+                    promptEl.classList.remove('opacity-0', 'translate-y-4');
+                    document.getElementById('prompt-text').innerText = `XEM CHI TIẾT: ${nearest.data.title}`;
+                    crosshair.classList.add('reticle-interact');
+                } else {
+                    activeExhibit = null;
+                    promptEl.classList.add('opacity-0', 'translate-y-4');
+                    crosshair.classList.remove('reticle-interact');
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- WINDOW RESIZE ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- EVENT BINDINGS & INIT ---
+        window.onload = function () {
+            initScene();
+            setupControls();
+            animate();
+
+            // Start Button
+            document.getElementById('start-btn').addEventListener('click', () => {
+                requestPointerLock();
+            });
+
+            // Close Modal Button
+            document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+
+            // Close Birthday Modal Button
+            document.getElementById('birthday-close-btn').addEventListener('click', () => {
+                const modal = document.getElementById('birthday-modal');
+                modal.classList.add('opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    requestPointerLock();
+                }, 300);
+            });
+
+            // Audio Toggle
+            const audioBtn = document.getElementById('audio-btn');
+            audioBtn.addEventListener('click', () => {
+                soundMuted = !soundMuted;
+                audioBtn.innerHTML = soundMuted ?
+                    '<i class="fas fa-volume-mute text-lg text-red-400"></i>' :
+                    '<i class="fas fa-volume-up text-lg"></i>';
+
+                if (soundMuted) {
+                    if (bgAudio) bgAudio.pause();
+                    stopAllMusicBoxTones();
+                } else {
+                    if (!musicBoxPlaying && bgAudio && bgAudio.src) {
+                        bgAudio.play().catch(e => { });
+                    }
+                }
+            });
+
+            // Teleport Menu Bindings
+            document.querySelectorAll('.teleport-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetAttr = e.currentTarget.getAttribute('data-target');
+                    if (targetAttr === 'musicbox') {
+                        teleportToZ(-80);
+                    } else {
+                        const index = parseInt(targetAttr);
+                        teleportToExhibit(index);
+                    }
+                });
+            });
+
+            // Mobile menu quick teleport toggle
+            document.getElementById('menu-toggle-btn').addEventListener('click', () => {
+                const menu = document.getElementById('teleport-menu');
+                menu.classList.toggle('hidden');
+                menu.classList.toggle('flex');
+            });
+        };
+    </script>
+</body>
+
+</html>
